@@ -1,0 +1,57 @@
+version: "3.7"
+services:
+  back-end:
+    build:
+      args: 
+      - NODE_ENV=development
+      context: back-end
+    command: sh -c "npm run migrate:up && npm run debug"
+    restart: always
+    environment: 
+      - DATABASE_NAME=remind_clone
+      - DATABASE_PASSWORD=1234
+      - DATABASE_USERNAME=root
+      - DATABASE_HOST=db
+      - NODE_ENV=development
+    ports: 
+      - 3000:3000
+    secrets:
+      - db-password
+    volumes:
+      - ./back-end:/code:ro
+      - ./back-end/package.json:/code/package.json
+      - ./back-end/package-lock.json:/code/package-lock.json
+      - back-notused:/opt/app/node_modules
+    depends_on: 
+      - db
+  db:
+    image: mysql:latest
+    command: '--default-authentication-plugin=mysql_native_password'
+    restart: always
+    secrets:
+      - db-password
+    volumes: 
+      - db-data:/var/lib/mysql
+    environment: 
+      - MYSQL_DATABASE=remind_clone
+      - MYSQL_ROOT_PASSWORD_FILE=/run/secrets/db-password
+  front-end:
+    build:
+      context: front-end
+    environment: 
+      - VUE_APP_SERVER_URL=http://localhost:3000
+      - PORT=8080
+      - NODE_ENV=
+    ports:
+      - 8080:8080
+    volumes:
+      - ./front-end/src:/code/src
+      - /code/node_modules
+    depends_on:
+      - back-end
+volumes:
+  back-notused:
+  db-data:
+secrets:
+  db-password:
+    file: db/password.txt
